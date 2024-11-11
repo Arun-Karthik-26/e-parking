@@ -1,23 +1,12 @@
-// frontend/src/App.jsx
-import React, { useState } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import Login from './components/Login';
-import UserDashboard from './components/UserDashboard';
-import OfficerDashboard from './components/OfficerDashboard';
-import LandingPage from './components/LandingPage';
+import React from 'react'
+import Landingpage from './components/Landingpage.jsx'
 
-function App() {
-  
-
+const App = () => {
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<LandingPage/>} />
-        <Route path="/user" element={<UserDashboard />} />
-        <Route path="/officer" element={<OfficerDashboard />} />
-      </Routes>
-    </BrowserRouter>
-  );
+    <div>
+      <Landingpage/>
+    </div>
+  )
 }
 
-export default App;
+export default App
