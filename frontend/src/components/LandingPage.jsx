@@ -297,6 +297,8 @@ const Landingpage = () => {
           />
         </div>
       </div>
+
+      
       <footer class="bg-gray-100 text-gray-700 py-2">
         <div class="container mx-auto flex flex-col md:flex-row justify-between items-center md:space-y-0">
           <div class="text-center md:text-left">

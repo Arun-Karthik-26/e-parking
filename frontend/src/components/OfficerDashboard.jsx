@@ -4,6 +4,7 @@ import axios from "axios";
 const OfficerDashboard = () => {
   const [challans, setChallans] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [violations, setViolations] = useState([]); // State to store fetched violations
   const [showForm, setShowForm] = useState(false); // State for form visibility
   const [newChallan, setNewChallan] = useState({
     vehicleNumber: "",
@@ -14,17 +15,25 @@ const OfficerDashboard = () => {
   }); // State for new challan data
 
   useEffect(() => {
-    // Fetch challans on page load
-    axios
-      .get("http://localhost:5000/challans")
-      .then((response) => {
-        setChallans(response.data);
+    // Fetch challans and violations on page load
+    const officerId = localStorage.getItem("userId"); // Retrieve officerId from localStorage
+
+    const fetchChallans = axios.get(`http://localhost:5000/challans?officerId=${officerId}`);
+    const fetchViolations = axios.get("http://localhost:5000/violations");
+
+    Promise.all([ fetchChallans,fetchViolations])
+      .then(([ challansResponse ,violationsResponse]) => {
+        setChallans(challansResponse.data);
+        console.log(violationsResponse.data);
+        setViolations(violationsResponse.data);
+         // Set fetched violations
         setLoading(false);
       })
       .catch((error) => {
-        console.error("Error fetching challans", error);
+        console.error("Error fetching data", error);
         setLoading(false);
       });
+      console.log("violation ",violations);
   }, []);
 
   const resolveAppeal = (challanId) => {
@@ -43,29 +52,59 @@ const OfficerDashboard = () => {
         console.error(error);
       });
   };
-
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setNewChallan((prevState) => ({
-      ...prevState,
-      [name]: value,
-    }));
+    // Update amount when issueType changes
+    if (name === 'issueType') {
+      const selectedViolation = violations.find((violation) => violation.description === value);
+      
+      if (selectedViolation) {
+        setNewChallan({
+          ...newChallan,
+          issueType: value,
+          amount: selectedViolation.amount, // Set the corresponding amount
+        });
+      } else {
+        // If no violation found, reset amount to empty or default value
+        setNewChallan({
+          ...newChallan,
+          issueType: value,
+          amount: '', // Or set to 0 if you want to default to 0
+        });
+      }
+    } else {
+      setNewChallan({
+        ...newChallan,
+        [name]: value,
+      });
+    }
   };
+  
+  
 
   const handleSubmit = (e) => {
     e.preventDefault();
     // Send the new challan data to backend
-    axios
-      .post("http://localhost:5000/challans", newChallan)
-      .then((response) => {
-        alert("Challan issued successfully");
-        setChallans([...challans, response.data]); // Add new challan to the list
-        setShowForm(false); // Close the form after successful submission
-      })
-      .catch((error) => {
-        alert("Failed to issue challan");
-        console.error(error);
-      });
+    const officerId = localStorage.getItem("userId");
+
+  // Add officerId to the newChallan object
+  const challanData = {
+    ...newChallan,
+    officerId, // Include the officerId
+  };
+  console.log(challanData);
+  // Send the new challan data to the backend
+  axios
+    .post("http://localhost:5000/add-challans", challanData)
+    .then((response) => {
+      alert("Challan issued successfully");
+      setChallans([...challans, response.data]); // Add new challan to the list
+      setShowForm(false); // Close the form after successful submission
+    })
+    .catch((error) => {
+      alert("Failed to issue challan");
+      console.error(error);
+    });
   };
 
   return (
@@ -106,22 +145,18 @@ const OfficerDashboard = () => {
         Issue New Challan
       </button>
 
-      {/* New Challan Form Modal */}
-      {showForm && (
+ {/* New Challan Form Modal */}
+ {showForm && (
         <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex justify-center items-center">
           <div className="bg-white p-8 rounded-lg shadow-md w-96">
             <h2 className="text-2xl font-semibold mb-4">Issue New Challan</h2>
             <form onSubmit={handleSubmit}>
               <div className="mb-4">
-                <label
-                  htmlFor="vehicleNumber"
-                  className="block text-sm font-medium text-gray-700"
-                >
+                <label className="block text-sm font-medium text-gray-700">
                   Vehicle Number
                 </label>
                 <input
                   type="text"
-                  id="vehicleNumber"
                   name="vehicleNumber"
                   value={newChallan.vehicleNumber}
                   onChange={handleInputChange}
@@ -130,15 +165,11 @@ const OfficerDashboard = () => {
                 />
               </div>
               <div className="mb-4">
-                <label
-                  htmlFor="vehicleType"
-                  className="block text-sm font-medium text-gray-700"
-                >
+                <label className="block text-sm font-medium text-gray-700">
                   Vehicle Type
                 </label>
                 <input
                   type="text"
-                  id="vehicleType"
                   name="vehicleType"
                   value={newChallan.vehicleType}
                   onChange={handleInputChange}
@@ -147,15 +178,11 @@ const OfficerDashboard = () => {
                 />
               </div>
               <div className="mb-4">
-                <label
-                  htmlFor="issueDate"
-                  className="block text-sm font-medium text-gray-700"
-                >
+                <label className="block text-sm font-medium text-gray-700">
                   Issue Date
                 </label>
                 <input
                   type="date"
-                  id="issueDate"
                   name="issueDate"
                   value={newChallan.issueDate}
                   onChange={handleInputChange}
@@ -164,31 +191,10 @@ const OfficerDashboard = () => {
                 />
               </div>
               <div className="mb-4">
-                <label
-                  htmlFor="amount"
-                  className="block text-sm font-medium text-gray-700"
-                >
-                  Amount
-                </label>
-                <input
-                  type="number"
-                  id="amount"
-                  name="amount"
-                  value={newChallan.amount}
-                  onChange={handleInputChange}
-                  className="mt-1 p-2 w-full border border-gray-300 rounded-md"
-                  required
-                />
-              </div>
-              <div className="mb-4">
-                <label
-                  htmlFor="issueType"
-                  className="block text-sm font-medium text-gray-700"
-                >
+                <label className="block text-sm font-medium text-gray-700">
                   Issue Type
                 </label>
                 <select
-                  id="issueType"
                   name="issueType"
                   value={newChallan.issueType}
                   onChange={handleInputChange}
@@ -196,16 +202,28 @@ const OfficerDashboard = () => {
                   required
                 >
                   <option value="">Select Issue Type</option>
-                  <option value="Speeding">Speeding</option>
-                  <option value="Parking Violation">Parking Violation</option>
-                  <option value="Expired Documents">Expired Documents</option>
-                  <option value="Other">Other</option>
+                  {violations.map((violation) => (
+                    <option key={violation.id} value={violation.description}>
+                      {violation.description}
+                    </option>
+                  ))}
                 </select>
               </div>
+              <input
+  type="number"
+  name="amount"
+  value={newChallan.amount} // Bind to state
+  onChange={handleInputChange}
+  className="mt-1 p-2 w-full border border-gray-300 rounded-md"
+  readOnly
+  required
+/>
+
+
               <div className="flex justify-end gap-4">
                 <button
                   type="button"
-                  onClick={() => setShowForm(false)} // Close the form
+                  onClick={() => setShowForm(false)}
                   className="bg-gray-300 text-gray-700 py-2 px-4 rounded-md hover:bg-gray-400"
                 >
                   Cancel
