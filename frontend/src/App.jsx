@@ -1,12 +1,17 @@
-import React from 'react'
-import Landingpage from './components/Landingpage.jsx'
+import React from 'react';
+import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import LandingPage from './components/Landingpage';
+import OfficerDashboard from './components/OfficerDashboard';
 
 const App = () => {
   return (
-    <div>
-      <Landingpage/>
-    </div>
-  )
-}
+    <Router>
+      <Routes>
+        <Route path="/" element={<LandingPage />} />
+        <Route path="/officer" element={<OfficerDashboard />} />
+      </Routes>
+    </Router>
+  );
+};
 
-export default App
+export default App;
