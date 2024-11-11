@@ -1,6 +1,9 @@
 import React, { useState } from "react";
 import { IoCloseSharp } from "react-icons/io5";
-import img from "../assets/landing.jpg"; // Make sure the path to your image is correct
+import img from "../assets/landing.jpg";
+import axios from "axios";
+import { useNavigate } from 'react-router-dom'; // Import useNavigate
+ // Make sure the path to your image is correct
 
 const Landingpage = () => {
   const [form, setForm] = useState({
@@ -16,7 +19,9 @@ const Landingpage = () => {
     terms: "",
   });
   const [isFormVisible, setIsFormVisible] = useState(false); // Control the visibility of the form
-  const [isLogin, setIsLogin] = useState(true); // Track if it's login or signup
+  const [isLogin, setIsLogin] = useState(true);
+  const navigate = useNavigate(); // Define navigate here
+  // Track if it's login or signup
 
   // Handle changes in the form fields
   const handleChange = (e) => {
@@ -28,7 +33,7 @@ const Landingpage = () => {
   };
 
   // Form submission and validation
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     let valid = true;
     let newErrors = { name: "", email: "", password: "", terms: "" };
@@ -59,9 +64,36 @@ const Landingpage = () => {
     setErrors(newErrors);
 
     if (valid) {
-      alert(isLogin ? "Successfully Logged In!" : "Successfully Registered!!!");
+      const endpoint = isLogin ? "http://localhost:5000/login" : "http://localhost:5000/register"; // Use the appropriate endpoint for login or registration
+      const requestData = {
+        email: form.email,
+        password: form.password,
+        ...(isLogin ? {} : { name: form.name }), // Add name and terms only if it's registration
+      };
+
+      try {
+        const response = await axios.post(endpoint, requestData);
+
+        if (response.status === 200) {
+          alert(isLogin ? "Successfully Logged In!" : "Successfully Registered!!!");
+  
+          const role = response.data.role; // Ensure this matches the backend response
+          const id = response.data.id;
+          localStorage.setItem('userId', id);  // Store userId in localStorage
+          if (role === "User") {
+            navigate('/user');
+          } else if (role === "Officer") {
+            navigate('/officer');
+          }
+        }
+      } 
+       
+      catch (error) {
+        console.error("Error:", error);
+        alert("An error occurred while submitting the form. Please try again.");
+      }
     } else {
-      alert("Form submission not successful");
+      alert("Form validation failed. Please check the input fields.");
     }
   };
 
