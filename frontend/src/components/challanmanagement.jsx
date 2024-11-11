@@ -5,6 +5,17 @@ import { Link } from 'react-router-dom';
 const ChallanManagement = () => {
   const [challans, setChallans] = useState([]);
 
+  // Function to load Razorpay script
+  const loadRazorpayScript = () => {
+    return new Promise((resolve) => {
+      const script = document.createElement("script");
+      script.src = "https://checkout.razorpay.com/v1/checkout.js";
+      script.onload = () => resolve(true);
+      script.onerror = () => resolve(false);
+      document.body.appendChild(script);
+    });
+  };
+
   const fetchChallans = async () => {
     try {
       const response = await axios.get('http://localhost:5000/challans/1'); // Replace with logged-in user ID
@@ -14,13 +25,44 @@ const ChallanManagement = () => {
     }
   };
 
-  const handlePayChallan = async (challanId) => {
-    try {
-      await axios.post(`http://localhost:5000/pay-challan/${challanId}`);
-      setChallans(challans.map(challan => challan.id === challanId ? { ...challan, status: 'paid' } : challan));
-    } catch (err) {
-      console.error('Error paying challan', err);
+  const handlePayment = async () => {
+    const res = await loadRazorpayScript();
+    const amount = 500;
+    if (!res) {
+      alert("Razorpay SDK failed to load. Are you online?");
+      return;
     }
+
+    const options = {
+      key: "rzp_test_4rdgre6savrrmw", // Razorpay test key
+      amount: amount * 100, // Amount in paise
+      currency: "INR",
+      name: "Parkify",
+      description: "Challan Payment",
+      handler: async function (response) {
+        alert(`Payment successful: ${response.razorpay_payment_id}`);
+        
+        // Call your backend to store payment details
+        await storePaymentDetails(response.razorpay_payment_id, challanId);
+
+        // Update challan status
+        setChallans(challans.map(challan => challan.id === challanId ? { ...challan, status: 'paid' } : challan));
+      },
+      prefill: {
+        name: localStorage.getItem("name") || "User",
+        email: localStorage.getItem("email") || "user@example.com",
+        contact: localStorage.getItem("mobile") || "9999999999",
+      },
+      notes: {
+        address: "Parkify Office",
+      },
+      theme: {
+        color: "#3399cc",
+      },
+    };
+
+    const paymentObject = new window.Razorpay(options);
+    paymentObject.open();
   };
 
   const handleAppealChallan = async (challanId) => {
@@ -29,6 +71,18 @@ const ChallanManagement = () => {
       setChallans(challans.map(challan => challan.id === challanId ? { ...challan, appeal_status: 'pending' } : challan));
     } catch (err) {
       console.error('Error appealing challan', err);
+    }
+  };
+
+  const storePaymentDetails = async (paymentId, challanId) => {
+    try {
+      // Store payment details in the backend for the specific challan
+      await axios.post('http://localhost:5000/store-payment', {
+        paymentId,
+        challanId,
+      });
+    } catch (error) {
+      console.error('Error storing payment details', error);
     }
   };
 
@@ -86,6 +140,12 @@ const ChallanManagement = () => {
               <th className="px-6 py-4 text-left text-sm font-medium text-gray-600 uppercase tracking-wider">Amount</th>
               <th className="px-6 py-4 text-left text-sm font-medium text-gray-600 uppercase tracking-wider">Status</th>
               <th className="px-6 py-4 text-left text-sm font-medium text-gray-600 uppercase tracking-wider">Actions</th>
+              <button
+                        onClick={() => handlePayment()}
+                        className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition duration-200 text-sm font-medium"
+                      >
+                        Pay
+                      </button>
             </tr>
           </thead>
           <tbody>
@@ -112,7 +172,7 @@ const ChallanManagement = () => {
                   <div className="flex space-x-2">
                     {challan.status === 'unpaid' ? (
                       <button
-                        onClick={() => handlePayChallan(challan.id)}
+                        onClick={() => handlePayment(challan.id, challan.amount)}
                         className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition duration-200 text-sm font-medium"
                       >
                         Pay
