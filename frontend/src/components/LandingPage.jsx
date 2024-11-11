@@ -243,8 +243,17 @@ const Landingpage = () => {
             Manage, search, and pay your parking challans with ease. Say goodbye to paperwork!
           </p>
           <div className="flex gap-5">
-            <button className="bg-red-600 text-white font-bold px-5 transition duration-300 py-3 rounded-lg hover:bg-red-500">
-              Learn More
+          <button onClick={() => {
+                setIsLogin(true); 
+                toggleFormVisibility(); // Open form and show login
+              }} className="bg-red-600 text-white font-bold px-5 transition duration-300 py-3 rounded-lg hover:bg-red-500">
+              Search Challan
+            </button>
+            <button onClick={() => {
+                setIsLogin(true); 
+                toggleFormVisibility(); // Open form and show login
+              }} className="bg-gray-600 text-white font-bold px-5 transition duration-300 py-3 rounded-lg hover:bg-gray-500">
+              Pay Now
             </button>
           </div>
         </div>
