@@ -88,6 +88,15 @@ const VehicleManagement = () => {
     fetchVehicles();
   }, []);
 
+  const handleLogOut = () => {
+    // Clear any necessary data (e.g., user authentication details)
+    localStorage.clear(); // or remove specific items if needed
+
+    // Navigate to the root route
+    navigate('/');
+  };
+
+
   return (
     <div className=" mx-auto">
       <div className="flex bg-white justify-between items-center sticky top-0 z-10 px-28 mt-5 shadow-lg pb-5">
@@ -122,7 +131,9 @@ const VehicleManagement = () => {
             </li>
           </ul>
           <div className="flex gap-3">
-            <button className="bg-red-600 text-white font-bold px-3 transition duration-300 py-2 rounded-lg hover:bg-red-500">
+            <button 
+            onClick={handleLogOut}
+            className="bg-red-600 text-white font-bold px-3 transition duration-300 py-2 rounded-lg hover:bg-red-500">
               LogOut
             </button>
           </div>

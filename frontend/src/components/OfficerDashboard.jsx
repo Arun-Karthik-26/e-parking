@@ -1,11 +1,15 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
+import { useNavigate } from 'react-router-dom';
+
 
 const OfficerDashboard = () => {
   const [challans, setChallans] = useState([]);
   const [loading, setLoading] = useState(true);
   const [violations, setViolations] = useState([]); // State to store fetched violations
-  const [showForm, setShowForm] = useState(false); // State for form visibility
+  const [showForm, setShowForm] = useState(false);
+  const navigate = useNavigate();
+  // State for form visibility
   const [newChallan, setNewChallan] = useState({
     vehicleNumber: "",
     vehicleType: "",
@@ -14,44 +18,48 @@ const OfficerDashboard = () => {
     issueType: "", // New field for issue type
   }); // State for new challan data
 
+  const fetchViolations = async () => {
+    try {
+      const response = await axios.get("http://localhost:5000/violations");
+      setViolations(response.data);
+    } catch (error) {
+      console.error("Error fetching violations:", error);
+    }
+  };
+
+  const fetchChallans = async () => {
+    try {
+      const officerId = localStorage.getItem("userId");
+      if (!officerId) {
+        console.error("Officer ID not found in localStorage");
+        return;
+      }
+      const response = await axios.get(`http://localhost:5000/challans?officerId=${officerId}`);
+      setChallans(response.data);
+      console.log(challans);
+    } catch (error) {
+      console.error("Error fetching challans:", error);
+    }
+  };
+
   useEffect(() => {
-    // Fetch challans and violations on page load
-    const officerId = localStorage.getItem("userId"); // Retrieve officerId from localStorage
+    const fetchData = async () => {
+      setLoading(true);
+      await Promise.all([fetchChallans(), fetchViolations()]);
+      setLoading(false);
+    };
 
-    const fetchChallans = axios.get(`http://localhost:5000/challans?officerId=${officerId}`);
-    const fetchViolations = axios.get("http://localhost:5000/violations");
-
-    Promise.all([ fetchChallans,fetchViolations])
-      .then(([ challansResponse ,violationsResponse]) => {
-        setChallans(challansResponse.data);
-        console.log(violationsResponse.data);
-        setViolations(violationsResponse.data);
-         // Set fetched violations
-        setLoading(false);
-      })
-      .catch((error) => {
-        console.error("Error fetching data", error);
-        setLoading(false);
-      });
-      console.log("violation ",violations);
+    fetchData();
   }, []);
 
-  const resolveAppeal = (challanId) => {
-    axios
-      .put(`http://localhost:5000/challan/resolve/${challanId}`)
-      .then((response) => {
-        alert("Appeal resolved");
-        setChallans(
-          challans.map((c) =>
-            c.id === challanId ? { ...c, status: "Resolved" } : c
-          )
-        );
-      })
-      .catch((error) => {
-        alert("Failed to resolve appeal");
-        console.error(error);
-      });
+  const handleLogOut = () => {
+    // Clear any necessary data (e.g., user authentication details)
+    localStorage.clear(); // or remove specific items if needed
+
+    // Navigate to the root route
+    navigate('/');
   };
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     // Update amount when issueType changes
@@ -79,8 +87,6 @@ const OfficerDashboard = () => {
       });
     }
   };
-  
-  
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -112,7 +118,8 @@ const OfficerDashboard = () => {
       {/* Header */}
       <header className="bg-white px-28 flex justify-between items-center py-5 shadow-lg mb-8">
         <h1 className="text-4xl font-bold">Officer Dashboard</h1>
-        <button className="bg-red-600 text-white font-bold px-3 transition duration-300 py-2 rounded-lg hover:bg-red-500">
+        <button onClick={handleLogOut}
+        className="bg-red-600 text-white font-bold px-3 transition duration-300 py-2 rounded-lg hover:bg-red-500">
           LogOut
         </button>
       </header>
@@ -124,15 +131,15 @@ const OfficerDashboard = () => {
           <div className="text-2xl">{challans.length}</div>
         </div>
         <div className="bg-white p-4 rounded-md shadow-md flex-1 text-center">
-          <div className="text-lg font-semibold">Appeals Pending</div>
+          <div className="text-lg font-semibold">Paid</div>
           <div className="text-2xl">
-            {challans.filter((c) => c.status === "Appealed").length}
+            {challans.filter((c) => c.status === "Paid").length}
           </div>
         </div>
         <div className="bg-white p-4 rounded-md shadow-md flex-1 text-center">
-          <div className="text-lg font-semibold">Resolved</div>
+          <div className="text-lg font-semibold">Not Paid</div>
           <div className="text-2xl">
-            {challans.filter((c) => c.status === "Resolved").length}
+            {challans.filter((c) => c.status === "Unpaid").length}
           </div>
         </div>
       </section>
@@ -261,29 +268,16 @@ const OfficerDashboard = () => {
           ) : (
             challans.map((challan) => (
               <tr key={challan.id} className="border-t">
-                <td className="py-3 px-6">{challan.id}</td>
-                <td className="py-3 px-6">{challan.vehicle_number}</td>
-                <td className="py-3 px-6">{challan.issue_date}</td>
+                <td className="py-3 px-6">{challan.challanId}</td>
+                <td className="py-3 px-6">{challan.vehicleNumber}</td>
+                <td className="py-3 px-6">{challan.issueDate}</td>
                 <td className="py-3 px-6">{challan.status}</td>
-                <td className="py-3 px-6">
-                  <button
-                    onClick={() => resolveAppeal(challan.id)}
-                    className="bg-yellow-500 text-white py-1 px-4 rounded-md hover:bg-yellow-400"
-                  >
-                    Resolve Appeal
-                  </button>
-                  <button
-                    onClick={() => console.log("View Challan", challan.id)}
-                    className="bg-blue-500 text-white py-1 px-4 rounded-md hover:bg-blue-400 ml-2"
-                  >
-                    View
-                  </button>
-                </td>
               </tr>
             ))
           )}
         </tbody>
       </table>
+
 
       {/* Footer */}
       <footer className="mt-8 text-center">
